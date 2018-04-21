@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="http://www.ken.com/schema/EJConvertor"
+            elementFormDefault="qualified">
+
+    <!-- 根标签 -->
+    <xsd:element name="configuration">
+        <xsd:complexType>
+            <xsd:sequence minOccurs="0" maxOccurs="unbounded">
+                <xsd:element name="entity" type="entityType"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+
+    <!--entity标签-->
+    <xsd:complexType name="entityType">
+        <xsd:sequence  minOccurs="0" maxOccurs="unbounded">
+            <xsd:choice>
+                <xsd:element name="property" type="propertyType"/>
+            </xsd:choice>
+        </xsd:sequence>
+        <xsd:attribute name="class" type="xsd:string" use="required"/>
+        <xsd:attribute name="sheetName" type="xsd:string" use="optional"/>
+        <xsd:attribute name="boldHeading" type="xsd:boolean" use="optional"/>
+    </xsd:complexType>
+
+    <!--property标签-->
+    <xsd:complexType name="propertyType">
+        <xsd:sequence maxOccurs="1">
+            <xsd:element name="field" type="xsd:string"/>
+            <xsd:element name="value" type="xsd:string"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+</xsd:schema>

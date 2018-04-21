@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd">
+
+    <!-- 加载资源文件 -->
+    <context:property-placeholder location="classpath:config/DBConfig.properties"/>
+
+    <!-- 配置自动扫描包 -->
+    <context:component-scan base-package="com.ken.wms">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+        <context:exclude-filter type="annotation"
+                                expression="org.springframework.web.bind.annotation.ControllerAdvice"/>
+    </context:component-scan>
+
+
+    <!-- 导入 shiro 配置 -->
+    <import resource="classpath:config/ShiroConfiguration.xml"/>
+
+
+    <!-- ============================================
+                      ExcelUtil 配置
+         ============================================-->
+    <bean id="EJConvertor" class="com.ken.wms.common.util.EJConvertor">
+        <constructor-arg type="java.lang.String" value="config/EJConvertorConfig.xml"/>
+    </bean>
+
+
+    <!-- ============================================
+                        持久化配置
+        ============================================-->
+    <!-- 配置数据源 -->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="user" value="${jdbc.user}"/>
+        <property name="password" value="${jdbc.password}"/>
+        <property name="driverClass" value="${jdbc.driverClass}"/>
+        <property name="jdbcUrl" value="${jdbc.jdbcUrl}"/>
+        <property name="testConnectionOnCheckout" value="${jdbc.testConnectionOnCheckout}"/>
+    </bean>
+
+    <!-- 配置 SqlSessionFactoryBean -->
+    <bean id="SqlSessionFactoryBean" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="configLocation" value="classpath:config/MyBatisConfiguration.xml"/>
+    </bean>
+
+    <!-- 配置事务 -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="select*" read-only="true"/>
+            <tx:method name="*"/>
+        </tx:attributes>
+    </tx:advice>
+    <aop:config>
+        <aop:pointcut expression="execution(* com.ken.wms.common.service.Interface..*.*(..)) ||
+         execution(* com.ken.wms.security.service.Interface..*.*(..))"
+                      id="txAdvicePointcut"/>
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="txAdvicePointcut" order="1"/>
+    </aop:config>
+
+
+    <!-- ==================================================
+                    日志记录的 AOP 配置
+        ================================================ -->
+    <!-- 配置 Service 层日志记录 -->
+    <bean id="serviceLogging" class="com.ken.wms.util.aop.ServiceLogging"/>
+    <!-- 配置用户操作日志记录 -->
+    <bean id="userOperationLogging" class="com.ken.wms.util.aop.UserOperationLogging"/>
+    <aop:config>
+        <aop:pointcut id="serviceMethodLoggingPointcut" expression="execution(* com.ken.wms.common.service.Impl.*.*(..)) ||
+         execution(* com.ken.wms.security.service.Impl.*.*(..))"/>
+        <aop:aspect id="serviceLoggingAspect" ref="serviceLogging" order="100">
+            <aop:before method="loggingMethodInvoked" pointcut-ref="serviceMethodLoggingPointcut"/>
+            <aop:after-throwing method="loggingServiceException" pointcut-ref="serviceMethodLoggingPointcut"
+                                throwing="throwable"/>
+        </aop:aspect>
+    </aop:config>
+    <aop:config>
+        <aop:pointcut expression="execution(* com.ken.wms.common.service.Impl.*.*(..)) and @annotation(userOperation)"
+                      id="userOperationLoggingPointcut"/>
+        <aop:aspect id="userOperationLoggingAspect" ref="userOperationLogging" order="20">
+            <aop:after-returning method="loggingUserOperation" pointcut-ref="userOperationLoggingPointcut"
+                                 returning="returnValue"/>
+        </aop:aspect>
+    </aop:config>
+
+
+    <!-- ===============================================
+               MyBatis MapperScannerConfigure 配置
+         =============================================== -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.ken.wms.dao"/>
+    </bean>
+</beans>

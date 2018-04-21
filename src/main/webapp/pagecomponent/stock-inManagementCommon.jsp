@@ -17,7 +17,6 @@
 			debugger;
 			supplierAutocomplete();
 			goodsAutocomplete();
-			$("goods_input").val("");
 		})
 
 		// 数据校验
